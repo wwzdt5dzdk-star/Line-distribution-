@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Pop Line Distribution Counter</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #38bdf8;
+            --text-color: #f8fafc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--accent);
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #fff;
+            outline: none;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            background: var(--accent);
+            color: #0f172a;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .member-list {
+            margin-bottom: 25px;
+        }
+
+        .member-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            background: #334155;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .member-name {
+            width: 100px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .member-item input[type="number"] {
+            width: 80px;
+            padding: 6px;
+            border-radius: 4px;
+            border: none;
+            background: #0f172a;
+            color: #fff;
+        }
+
+        .color-picker {
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            background: none;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+
+        .chart-container {
+            margin-top: 20px;
+            border-top: 1px solid #334155;
+            padding-top: 20px;
+        }
+
+        .progress-bar-container {
+            display: flex;
+            height: 25px;
+            width: 100%;
+            background-color: #0f172a;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-segment {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .stat-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Line Distribution Counter</h1>
+    
+    <div class="input-group">
+        <input type="text" id="memberName" placeholder="Tên thành viên (VD: Chuu, Heejin...)">
+        <button onclick="addMember()">Thêm</button>
+    </div>
+
+    <div class="member-list" id="memberList"></div>
+
+    <div class="chart-container">
+        <h3>Kết quả chia Line</h3>
+        <div class="progress-bar-container" id="progressBar"></div>
+        <div class="stats-list" id="statsList"></div>
+    </div>
+</div>
+
+<script>
+    let members = [
+        { id: 1, name: "Thành viên A", time: 15, color: "#38bdf8" },
+        { id: 2, name: "Thành viên B", time: 25, color: "#f43f5e" }
+    ];
+
+    const defaultColors = ["#38bdf8", "#f43f5e", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6"];
+
+    function render() {
+        const memberListEl = document.getElementById("memberList");
+        const progressBarEl = document.getElementById("progressBar");
+        const statsListEl = document.getElementById("statsList");
+
+        memberListEl.innerHTML = "";
+        progressBarEl.innerHTML = "";
+        statsListEl.innerHTML = "";
+
+        const totalTime = members.reduce((acc, cur) => acc + (parseFloat(cur.time) || 0), 0);
+
+        members.forEach((member, index) => {
+            const timeNum = parseFloat(member.time) || 0;
+            const percentage = totalTime > 0 ? ((timeNum / totalTime) * 100).toFixed(1) : 0;
+
+            // Render Inputs
+            const item = document.createElement("div");
+            item.className = "member-item";
+            item.innerHTML = `
+                <input type="color" class="color-picker" value="${member.color}" onchange="updateColor(${member.id}, this.value)">
+                <span class="member-name">${member.name}</span>
+                <input type="number" step="0.1" min="0" value="${member.time}" placeholder="Giây" oninput="updateTime(${member.id}, this.value)">
+                <span>giây</span>
+                <button class="btn-delete" onclick="deleteMember(${member.id})">Xóa</button>
+            `;
+            memberListEl.appendChild(item);
+
+            // Render Segment Bar
+            if (timeNum > 0) {
+                const segment = document.createElement("div");
+                segment.className = "progress-segment";
+                segment.style.width = `${percentage}%`;
+                segment.style.backgroundColor = member.color;
+                segment.title = `${member.name}: ${percentage}%`;
+                progressBarEl.appendChild(segment);
+            }
+
+            // Render Stats List
+            const stat = document.createElement("div");
+            stat.className = "stat-item";
+            stat.innerHTML = `
+                <div class="stat-info">
+                    <span class="color-dot" style="background-color: ${member.color}"></span>
+                    <span>${member.name}</span>
+                </div>
+                <span><b>${timeNum}s</b> (${percentage}%)</span>
+            `;
+            statsListEl.appendChild(stat);
+        });
+    }
+
+    function addMember() {
+        const nameInput = document.getElementById("memberName");
+        const name = nameInput.value.trim();
+        if (!name) return;
+
+        const newId = Date.now();
+        const color = defaultColors[members.length % defaultColors.length];
+        
+        members.push({ id: newId, name: name, time: 0, color: color });
+        nameInput.value = "";
+        render();
+    }
+
+    function updateTime(id, val) {
+        const member = members.find(m => m.id === id);
+        if (member) {
+            member.time = val;
+            render();
+        }
+    }
+
+    function updateColor(id, val) {
+        const member = members.find(m => m.id === id);
+        if (member) {
+            member.color = val;
+            render();
+        }
+    }
+
+    function deleteMember(id) {
+        members = members.filter(m => m.id !== id);
+        render();
+    }
+
+    // Khởi chạy lần đầu
+    render();
+</script>
+
+</body>
+</html>
